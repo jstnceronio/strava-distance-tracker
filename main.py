@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 auth_url = "https://www.strava.com/oauth/token"
-activites_url = "https://www.strava.com/api/v3/athlete/activities"
+activities_url = "https://www.strava.com/api/v3/athlete/activities"
 
 payload = {
     'client_id': os.getenv('CLIENT_ID'),
@@ -20,13 +20,45 @@ res = requests.post(auth_url, data=payload, verify=False)
 access_token = res.json()['access_token']
 print("Access Token = {}\n".format(access_token))
 
-# Requesting pages (200 activities per full page) ...
-page = 1
-page_non_empty = True
-while page_non_empty:
+
+def summarize_distance_in_list(activities):
+    summarized_distance = 0
+
+    for activity in activities:
+        summarized_distance += activity['distance']
+
+    return summarized_distance
+
+
+def get_all_kilometers():
+    page = 1
+    page_not_empty = True
+    overall_distance = 0
+    activity_pages = []
     header = {'Authorization': 'Bearer ' + access_token}
-    param = {'per_page': 200, 'page': page}
-    my_activities = requests.get(activites_url, headers=header, params=param).json()
-    page_non_empty = bool(my_activities)
-    print(my_activities)
-    page += 1
+
+    while page_not_empty:
+        param = {'per_page': 200, 'page': page}
+        activity_page = requests.get(activities_url, headers=header, params=param).json()
+        activity_pages.append(activity_page)
+        page_not_empty = bool(activity_page)
+        page += 1
+
+    for page in activity_pages:
+        overall_distance += summarize_distance_in_list(page)
+
+    return overall_distance
+
+
+print(str(round(get_all_kilometers())) + ' Kilometers')
+
+def get_weekly_kilometers():
+    after_date = ''
+    before_date = ''
+
+    header = {'Authorization': 'Bearer ' + access_token}
+    param = {'per_page': 200, 'page': 1}  # todo: add weekly parameter
+
+    activities = requests.get(activities_url, headers=header, params=param).json()
+
+    return summarize_distance_in_list(activities)
